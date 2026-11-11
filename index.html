@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#6d5dfc">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="口语随身练">
+<title>英语口语随身练</title>
+<style>
+  :root{
+    --bg:#0f1120; --card:#1b1e33; --card2:#242841; --accent:#6d5dfc;
+    --accent2:#4cc9f0; --ok:#2dd4a7; --bad:#f4726b; --text:#eef0ff;
+    --muted:#9aa0c3; --border:#2c3050; --radius:18px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0; padding:0}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",Roboto,sans-serif;
+    font-size:16px; line-height:1.5; min-height:100vh;
+    padding-bottom:calc(64px + env(safe-area-inset-bottom));
+  }
+  header{
+    position:sticky; top:0; z-index:20; background:rgba(15,17,32,.9);
+    backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+    padding:14px 18px 10px; border-bottom:1px solid var(--border);
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  header h1{font-size:18px; margin:0; font-weight:700}
+  header .streak{font-size:13px; color:var(--muted)}
+  .streak b{color:#ffd166}
+  main{padding:16px 16px 20px; max-width:560px; margin:0 auto}
+  .view{display:none}
+  .view.active{display:block; animation:fade .25s ease}
+  @keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  nav{
+    position:fixed; left:0; right:0; bottom:0; z-index:20;
+    background:rgba(20,22,40,.96); backdrop-filter:blur(10px);
+    border-top:1px solid var(--border);
+    display:flex; justify-content:space-around;
+    padding:6px 0 calc(6px + env(safe-area-inset-bottom));
+  }
+  nav button{
+    background:none; border:none; color:var(--muted); font-size:11px;
+    display:flex; flex-direction:column; align-items:center; gap:3px;
+    padding:6px 12px; cursor:pointer; flex:1;
+  }
+  nav button .ico{font-size:20px; line-height:1}
+  nav button.active{color:var(--accent2)}
+  .card{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:18px; margin-bottom:14px;
+  }
+  .card h2{margin:0 0 6px; font-size:16px}
+  .card p{margin:0; color:var(--muted); font-size:13.5px}
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:var(--accent); color:#fff; border:none; border-radius:12px;
+    padding:13px 20px; font-size:15px; font-weight:600; cursor:pointer; width:100%;
+  }
+  .btn:active{transform:scale(.98)}
+  .btn.ghost{background:transparent; border:1px solid var(--border); color:var(--text)}
+  .btn.ok{background:var(--ok); color:#052e22}
+  .btn.bad{background:var(--bad); color:#3a0a08}
+  .row{display:flex; gap:10px}
+  .row .btn{flex:1}
+  .pill{
+    display:inline-flex; align-items:center; gap:6px; background:var(--card2);
+    border:1px solid var(--border); border-radius:999px; padding:7px 14px;
+    font-size:13px; color:var(--text); cursor:pointer;
+  }
+  .pill.active{background:var(--accent); border-color:var(--accent)}
+  .tabs{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px}
+  .muted{color:var(--muted)}
+  .bar{height:8px; background:var(--card2); border-radius:999px; overflow:hidden}
+  .bar > i{display:block; height:100%; background:linear-gradient(90deg,var(--accent),var(--accent2)); border-radius:999px; transition:width .3s}
+  .big{font-size:40px; font-weight:800; line-height:1}
+  .center{text-align:center}
+  /* flashcards */
+  .flash{min-height:300px; display:flex; flex-direction:column}
+  .flash .stage{flex:1; display:flex; align-items:center; justify-content:center; text-align:center; padding:20px 6px; cursor:pointer}
+  .flash .en{font-size:26px; font-weight:700; line-height:1.35}
+  .flash .zh{font-size:17px; color:var(--muted); margin-top:10px}
+  .flash .hint{font-size:13px; color:var(--muted); margin-top:16px}
+  .speak-btn{
+    background:var(--card2); border:1px solid var(--border); color:var(--accent2);
+    width:46px; height:46px; border-radius:50%; font-size:20px; cursor:pointer; flex:none;
+  }
+  .mic-btn{
+    background:var(--card2); border:1px solid var(--border); color:#fff;
+    width:46px; height:46px; border-radius:50%; font-size:20px; cursor:pointer; flex:none;
+  }
+  .mic-btn.rec{background:var(--bad); animation:pulse 1s infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(244,114,107,.5)} 50%{box-shadow:0 0 0 12px rgba(244,114,107,0)}}
+  .line-item{
+    display:flex; align-items:center; gap:10px; padding:12px;
+    background:var(--card); border:1px solid var(--border); border-radius:14px; margin-bottom:10px;
+  }
+  .line-item .txt{flex:1; min-width:0}
+  .line-item .en{font-size:15.5px; font-weight:600}
+  .line-item .zh{font-size:13px; color:var(--muted)}
+  .result{
+    margin-top:12px; padding:12px 14px; border-radius:12px; font-size:14px; display:none;
+    background:var(--card2); border:1px solid var(--border);
+  }
+  .result.show{display:block}
+  .score{font-size:20px; font-weight:700}
+  .dialog-title{font-size:18px; font-weight:700; margin-bottom:4px}
+  .dialog-sub{font-size:13px; color:var(--muted); margin-bottom:14px}
+  .check{display:flex; align-items:center; gap:10px; padding:13px 0; border-bottom:1px solid var(--border); cursor:pointer}
+  .check:last-child{border-bottom:none}
+  .check .box{width:22px; height:22px; border-radius:7px; border:2px solid var(--muted); flex:none; display:flex; align-items:center; justify-content:center; font-size:14px; color:transparent}
+  .check.done .box{background:var(--ok); border-color:var(--ok); color:#052e22}
+  .check.done .txt{color:var(--muted); text-decoration:line-through}
+  .progress-note{font-size:13px; color:var(--muted); text-align:center; margin-top:10px}
+  .tag{display:inline-block; font-size:11px; background:var(--card2); color:var(--muted); border-radius:6px; padding:2px 8px; margin-right:6px}
+  .toast{
+    position:fixed; left:50%; bottom:90px; transform:translateX(-50%);
+    background:#fff; color:#111; padding:10px 18px; border-radius:999px; font-size:14px;
+    opacity:0; pointer-events:none; transition:opacity .25s; z-index:99; box-shadow:0 4px 20px rgba(0,0,0,.4);
+  }
+  .toast.show{opacity:1}
+  .warn{font-size:12.5px; color:var(--bad); margin-top:8px; line-height:1.5}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>口语随身练</h1>
+  <div class="streak">🔥 连续 <b id="streakDays">0</b> 天</div>
+</header>
+
+<main>
+
+  <!-- 今日 -->
+  <section class="view active" id="view-today">
+    <div class="card center">
+      <div class="muted" style="font-size:13px">今日 15 分钟计划</div>
+      <div class="big" id="todayProgress">0%</div>
+      <div class="bar" style="margin:14px 0 6px"><i id="todayBar" style="width:0%"></i></div>
+      <div class="muted" style="font-size:13px">每天开口 15 分钟，2 个月见效果</div>
+    </div>
+
+    <div class="card">
+      <div class="check" data-task="0"><div class="box">✓</div><div class="txt">🗣️ 跟读 5 分钟（口语页，选一段念出声）</div></div>
+      <div class="check" data-task="1"><div class="box">✓</div><div class="txt">📚 背单词 / 口语块 5 分钟（背单词页）</div></div>
+      <div class="check" data-task="2"><div class="box">✓</div><div class="txt">💭 自言自语 5 分钟（看下面的提示说出口）</div></div>
+    </div>
+
+    <div class="card">
+      <h2>🎯 今日自言自语提示</h2>
+      <p id="selftalkPrompt" style="font-size:15px; color:var(--text)"></p>
+      <p class="muted" style="margin-top:8px">用英语大声说出来，卡壳的地方就是你要补的缺口。</p>
+      <button class="btn ghost" style="margin-top:12px" onclick="nextSelfTalk()">换一个提示</button>
+    </div>
+
+    <div class="card">
+      <h2>📖 今天要复习</h2>
+      <p id="dueSummary">加载中…</p>
+      <button class="btn" style="margin-top:12px" onclick="startReview()">开始复习</button>
+    </div>
+  </section>
+
+  <!-- 背单词 -->
+  <section class="view" id="view-words">
+    <div class="tabs">
+      <span class="pill active" data-deck="phrases" onclick="setDeck('phrases')">💬 口语块</span>
+      <span class="pill" data-deck="vocab" onclick="setDeck('vocab')">📖 词汇</span>
+    </div>
+    <div class="card center" style="margin-bottom:14px">
+      <div class="muted" style="font-size:13px">待复习 <b id="dueCount" style="color:var(--accent2)">0</b> 个 · 已掌握 <b id="masteredCount" style="color:var(--ok)">0</b> 个</div>
+    </div>
+
+    <div id="reviewArea">
+      <div class="card flash" id="flashCard">
+        <div class="stage" id="flashStage" onclick="flipCard()">
+          <div>
+            <div class="en" id="flashFront">点「开始复习」</div>
+            <div class="zh" id="flashBack" style="display:none"></div>
+          </div>
+        </div>
+        <div class="hint center" id="flashHint">点卡片翻面看答案</div>
+        <div style="margin-top:12px">
+          <button class="speak-btn" style="float:right; margin-left:10px" id="flashSpeak" onclick="speakFlash(event)">🔊</button>
+        </div>
+        <div class="row" style="margin-top:14px">
+          <button class="btn bad" id="btnAgain" style="display:none" onclick="rateCard(false)">😅 不认识</button>
+          <button class="btn ok" id="btnKnow" style="display:none" onclick="rateCard(true)">✅ 认识</button>
+        </div>
+      </div>
+      <div class="card center" id="reviewDone" style="display:none">
+        <div style="font-size:40px">🎉</div>
+        <h2>本组复习完成！</h2>
+        <p class="muted">今天到此的卡片都过了一遍，明天再来巩固。</p>
+        <button class="btn" style="margin-top:12px" onclick="startReview()">再练一组</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 练口语 -->
+  <section class="view" id="view-speak">
+    <div class="card">
+      <h2>🗣️ 跟读练习</h2>
+      <p>点 🔊 听它念，跟着大声读出来；点 🎤 对着手机说，看看你读得准不准。</p>
+      <p class="warn" id="micWarn"></p>
+    </div>
+    <div id="speakList"></div>
+  </section>
+
+  <!-- 场景对话 -->
+  <section class="view" id="view-dialog">
+    <div id="dialogList"></div>
+  </section>
+
+</main>
+
+<nav>
+  <button data-v="today" class="active" onclick="showView('today')"><span class="ico">🏠</span>今日</button>
+  <button data-v="words" onclick="showView('words')"><span class="ico">📚</span>背单词</button>
+  <button data-v="speak" onclick="showView('speak')"><span class="ico">🗣️</span>练口语</button>
+  <button data-v="dialog" onclick="showView('dialog')"><span class="ico">💬</span>对话</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============ 数据 ============ */
+const PHRASES = [
+  {en:"How's it going?", zh:"最近怎么样？", cat:"寒暄"},
+  {en:"How's your day been?", zh:"今天过得怎么样？", cat:"寒暄"},
+  {en:"Long time no see!", zh:"好久不见！", cat:"寒暄"},
+  {en:"What have you been up to?", zh:"你最近在忙什么？", cat:"寒暄"},
+  {en:"Not much, just the usual.", zh:"没什么，老样子。", cat:"寒暄"},
+  {en:"I'm doing alright, thanks.", zh:"我还不错，谢谢。", cat:"寒暄"},
+  {en:"Nice weather we're having.", zh:"今天天气不错啊。", cat:"邻里"},
+  {en:"How are you settling in?", zh:"你住得还习惯吗？", cat:"邻里"},
+  {en:"Do you live around here?", zh:"你住这附近吗？", cat:"邻里"},
+  {en:"I just moved in next door.", zh:"我刚搬到隔壁。", cat:"邻里"},
+  {en:"Feel free to drop by anytime.", zh:"随时欢迎来坐坐。", cat:"邻里"},
+  {en:"Can I get a coffee to go?", zh:"来杯咖啡带走。", cat:"点餐"},
+  {en:"I'll have the same.", zh:"我也要一样的。", cat:"点餐"},
+  {en:"For here or to go?", zh:"在这儿吃还是带走？", cat:"点餐"},
+  {en:"Could I get the bill, please?", zh:"麻烦结账。", cat:"点餐"},
+  {en:"What do you recommend?", zh:"你有什么推荐？", cat:"点餐"},
+  {en:"What are you up to this weekend?", zh:"你周末有什么安排？", cat:"朋友"},
+  {en:"Want to grab a bite to eat?", zh:"要不要一起去吃点东西？", cat:"朋友"},
+  {en:"I'm gonna hit the gym later.", zh:"我一会儿去健身房。", cat:"朋友"},
+  {en:"Do you mind if I use the kitchen?", zh:"我用下厨房可以吗？", cat:"朋友"},
+  {en:"Let me know if you need anything.", zh:"需要什么跟我说。", cat:"朋友"},
+  {en:"Excuse me, how do I get to the subway?", zh:"请问地铁怎么走？", cat:"问路"},
+  {en:"Is it far from here?", zh:"离这儿远吗？", cat:"问路"},
+  {en:"It's just around the corner.", zh:"就在拐角处。", cat:"问路"},
+  {en:"Could you say that again?", zh:"你能再说一遍吗？", cat:"问路"},
+  {en:"I'm a bit lost.", zh:"我有点迷路了。", cat:"问路"},
+  {en:"That sounds great!", zh:"听起来不错！", cat:"回应"},
+  {en:"No worries.", zh:"没事的。", cat:"回应"},
+  {en:"I'm not sure I follow.", zh:"我没太听懂。", cat:"回应"},
+  {en:"Sorry, I spaced out.", zh:"抱歉，我走神了。", cat:"回应"},
+  {en:"That's a good point.", zh:"说得有道理。", cat:"回应"},
+  {en:"I gotta run.", zh:"我得走了。", cat:"告别"},
+  {en:"Catch you later!", zh:"回头见！", cat:"告别"},
+  {en:"Have a good one!", zh:"祝你有愉快的一天！", cat:"告别"},
+  {en:"Let's keep in touch.", zh:"保持联系。", cat:"告别"},
+  {en:"Take care!", zh:"保重！", cat:"告别"},
+];
+
+const VOCAB = [
+  {en:"hang out", zh:"一起闲逛、聚会", ex:"We should hang out sometime."},
+  {en:"catch up", zh:"叙旧、聊近况", ex:"Let's catch up over coffee."},
+  {en:"grab", zh:"随便买/拿（口语）", ex:"I'll grab a sandwich."},
+  {en:"drop by", zh:"顺路拜访", ex:"Drop by anytime."},
+  {en:"running late", zh:"要迟到了", ex:"I'm running late, sorry!"},
+  {en:"awkward", zh:"尴尬的", ex:"That was so awkward."},
+  {en:"exhausted", zh:"精疲力尽的", ex:"I'm exhausted after work."},
+  {en:"commute", zh:"通勤", ex:"My commute is an hour."},
+  {en:"roommate", zh:"室友", ex:"My roommate is super nice."},
+  {en:"neighbor", zh:"邻居", ex:"My neighbor has a dog."},
+  {en:"schedule", zh:"日程、安排", ex:"My schedule is packed."},
+  {en:"errand", zh:"杂事、跑腿", ex:"I've got errands to run."},
+  {en:"groceries", zh:"食品杂货", ex:"I need to buy groceries."},
+  {en:"leftovers", zh:"剩饭剩菜", ex:"We can eat the leftovers."},
+  {en:"laundry", zh:"要洗的衣服/洗衣", ex:"I have to do laundry."},
+  {en:"chore", zh:"家务", ex:"Cleaning is such a chore."},
+  {en:"nap", zh:"小睡", ex:"I took a nap after lunch."},
+  {en:"gym", zh:"健身房", ex:"I go to the gym daily."},
+  {en:"busy", zh:"忙碌的", ex:"I'm busy this week."},
+  {en:"free", zh:"有空的", ex:"Are you free tonight?"},
+  {en:"plan", zh:"计划", ex:"What's the plan for today?"},
+  {en:"invite", zh:"邀请", ex:"She invited me to dinner."},
+  {en:"join", zh:"加入", ex:"Can I join you?"},
+  {en:"borrow", zh:"借入", ex:"Can I borrow your pen?"},
+  {en:"lend", zh:"借出", ex:"Could you lend me $10?"},
+  {en:"suggest", zh:"建议", ex:"What do you suggest?"},
+  {en:"agree", zh:"同意", ex:"I totally agree."},
+  {en:"mind", zh:"介意", ex:"Do you mind if I sit here?"},
+];
+
+const DIALOGUES = [
+  {title:"电梯里和邻居寒暄", icon:"🏢", lines:[
+    {en:"Morning! Nice weather we're having.", zh:"早！今天天气不错。"},
+    {en:"Yeah, finally some sun.", zh:"是啊，终于出太阳了。"},
+    {en:"How are you settling in?", zh:"你住得还习惯吗？"},
+    {en:"Pretty good, still getting used to the neighborhood.", zh:"还不错，还在熟悉这附近。"},
+    {en:"Feel free to drop by anytime.", zh:"随时欢迎来坐坐。"},
+    {en:"Thanks, I will!", zh:"谢谢，我会的！"},
+  ]},
+  {title:"咖啡店点餐", icon:"☕", lines:[
+    {en:"Hi, what can I get for you?", zh:"你好，要点什么？"},
+    {en:"Can I get a latte to go, please?", zh:"来杯拿铁带走。"},
+    {en:"Sure. Anything else?", zh:"好的，还要别的吗？"},
+    {en:"That's it, thanks.", zh:"就这些，谢谢。"},
+    {en:"For here or to go?", zh:"在这儿喝还是带走？"},
+    {en:"To go, please.", zh:"带走。"},
+  ]},
+  {title:"和新室友聊天", icon:"🛋️", lines:[
+    {en:"Hey, I'm Alex, I just moved in.", zh:"你好，我是 Alex，刚搬进来。"},
+    {en:"Nice to meet you! I'm Sam.", zh:"很高兴认识你！我是 Sam。"},
+    {en:"Do you mind if I use the kitchen?", zh:"我用下厨房可以吗？"},
+    {en:"Not at all, go ahead.", zh:"当然可以，随便用。"},
+    {en:"Want to grab dinner together later?", zh:"一会儿一起吃饭吗？"},
+    {en:"Sounds good!", zh:"好呀！"},
+  ]},
+  {title:"问路去地铁", icon:"🚇", lines:[
+    {en:"Excuse me, how do I get to the subway?", zh:"请问地铁怎么走？"},
+    {en:"It's just around the corner, on your left.", zh:"就在拐角处，你左边。"},
+    {en:"Is it far from here?", zh:"离这儿远吗？"},
+    {en:"Not at all, about five minutes.", zh:"不远，大概五分钟。"},
+    {en:"Thanks a lot!", zh:"太谢谢了！"},
+  ]},
+  {title:"周末约朋友", icon:"🍻", lines:[
+    {en:"What are you up to this weekend?", zh:"你周末有什么安排？"},
+    {en:"Not much, just relaxing. How about you?", zh:"没什么，就放松一下。你呢？"},
+    {en:"A few of us are grabbing dinner Friday. Want to join?", zh:"我们几个人周五聚餐，你要来吗？"},
+    {en:"Sure, I'd love to! What time?", zh:"当然，我很乐意！几点？"},
+    {en:"Around seven. I'll send you the place.", zh:"大概七点，我把地址发你。"},
+  ]},
+];
+
+const SELFTALK = [
+  "Describe your morning routine out loud, step by step.",
+  "Talk about what you ate today and whether you liked it.",
+  "Describe the room you're in right now in as much detail as you can.",
+  "Explain your plans for this weekend.",
+  "Talk about a movie or show you watched recently and how it made you feel.",
+  "Describe your best friend and what you like about them.",
+  "Talk about the weather today and how it makes you feel.",
+  "Explain how to get from your home to the nearest coffee shop.",
+  "Describe your job or studies and what a typical day looks like.",
+  "Talk about something that made you happy or annoyed recently.",
+];
+
+/* ============ 状态 ============ */
+const KEY = "eng_daily_v1";
+let state = load();
+function load(){
+  try{
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if(s && s.cards) return s;
+  }catch(e){}
+  return {cards:{}, today:{}, selftalk:0};
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+
+const INTERVALS = [0, 1, 3, 7, 14, 30]; // days per level
+function dayMs(){ return 86400000; }
+function todayKey(){ const d=new Date(); return d.getFullYear()+"-"+d.getMonth()+"-"+d.getDate(); }
+function cardId(deck, i){ return deck+"_"+i; }
+
+function getCard(deck, i){
+  const id = cardId(deck,i);
+  if(!state.cards[id]){
+    state.cards[id] = {level:0, due:Date.now(), reps:0};
+  }
+  return {id, ...state.cards[id]};
+}
+function dueCards(deck){
+  const list = deck==="phrases" ? PHRASES : VOCAB;
+  const now = Date.now();
+  const out = [];
+  list.forEach((item,i)=>{
+    const id = cardId(deck,i);
+    const c = state.cards[id];
+    const due = c ? c.due : now;
+    if(due <= now) out.push({id, i, item, deck, level:c?c.level:0});
+  });
+  return out;
+}
+function masteredCount(deck){
+  const list = deck==="phrases" ? PHRASES : VOCAB;
+  return list.filter((_,i)=>{ const c=state.cards[cardId(deck,i)]; return c && c.level>=5; }).length;
+}
+
+/* ============ TTS ============ */
+let voices = [];
+function loadVoices(){ voices = speechSynthesis.getVoices(); }
+loadVoices();
+if("speechSynthesis" in window){
+  speechSynthesis.onvoiceschanged = loadVoices;
+}
+function pickVoice(){
+  if(!voices.length) loadVoices();
+  const prefer = ["Google US English","Samantha","Microsoft Aria","Microsoft Jenny","Microsoft Zira","Google UK English Female","Karen","Daniel"];
+  for(const p of prefer){ const v = voices.find(v=>v.name===p); if(v) return v; }
+  return voices.find(v=>v.lang && v.lang.toLowerCase().startsWith("en")) || voices.find(v=>v.lang && v.lang.toLowerCase().startsWith("en-us")) || null;
+}
+function speak(text, rate){
+  if(!("speechSynthesis" in window)){ toast("此浏览器不支持语音"); return; }
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  u.rate = rate || 0.95;
+  const v = pickVoice(); if(v) u.voice = v;
+  speechSynthesis.speak(u);
+}
+
+/* ============ 语音识别 ============ */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let recognizing = false, recTarget = "";
+function micAvailable(){
+  if(!SR) return "当前浏览器不支持语音识别（推荐用 Chrome 或 Safari 打开）。";
+  if(location.protocol === "file:") return "本地文件无法用麦克风，部署到网址后即可使用跟读打分。";
+  return "";
+}
+
+/* ============ 视图切换 ============ */
+function showView(v){
+  document.querySelectorAll(".view").forEach(e=>e.classList.remove("active"));
+  document.getElementById("view-"+v).classList.add("active");
+  document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("active", b.dataset.v===v));
+  if(v==="words") renderWordsStats();
+  if(v==="speak") renderSpeakList();
+  if(v==="dialog") renderDialogList();
+  if(v==="today") renderToday();
+}
+
+/* ============ 今日 ============ */
+function renderToday(){
+  const k = todayKey();
+  if(state.today.date !== k){ state.today = {date:k, tasks:[false,false,false]}; save(); }
+  const done = state.today.tasks.filter(Boolean).length;
+  const pct = Math.round(done/3*100);
+  document.getElementById("todayProgress").textContent = pct+"%";
+  document.getElementById("todayBar").style.width = pct+"%";
+  document.querySelectorAll(".check").forEach((el,i)=>{
+    el.classList.toggle("done", !!state.today.tasks[i]);
+    el.onclick = ()=>{ state.today.tasks[i] = !state.today.tasks[i]; save(); renderToday(); };
+  });
+  document.getElementById("selftalkPrompt").textContent = SELFTALK[state.selftalk % SELFTALK.length];
+  const d1 = dueCards("phrases").length, d2 = dueCards("vocab").length;
+  const m1 = masteredCount("phrases"), m2 = masteredCount("vocab");
+  document.getElementById("dueSummary").textContent = `口语块待复习 ${d1} 个，词汇待复习 ${d2} 个；已掌握 ${m1+m2} 个表达。`;
+  // streak
+  let streak = 0;
+  if(state.today.lastDone === k) streak = state.today.streak || 0;
+  else streak = state.today.streak || 0;
+  document.getElementById("streakDays").textContent = streak;
+}
+function nextSelfTalk(){ state.selftalk = (state.selftalk||0)+1; save(); renderToday(); }
+
+/* ============ 背单词 ============ */
+let deck = "phrases";
+let queue = [], qi = 0, flipped = false;
+
+function setDeck(d){
+  deck = d;
+  document.querySelectorAll(".pill").forEach(p=>p.classList.toggle("active", p.dataset.deck===d));
+  renderWordsStats();
+  document.getElementById("reviewArea").innerHTML = document.getElementById("reviewArea").innerHTML; // keep
+  showIdle();
+}
+function renderWordsStats(){
+  document.getElementById("dueCount").textContent = dueCards(deck).length;
+  document.getElementById("masteredCount").textContent = masteredCount(deck);
+}
+function showIdle(){
+  document.getElementById("flashCard").style.display = "block";
+  document.getElementById("reviewDone").style.display = "none";
+  document.getElementById("flashFront").textContent = "点「开始复习」";
+  document.getElementById("flashBack").style.display = "none";
+  document.getElementById("flashHint").textContent = "点卡片翻面看答案";
+  document.getElementById("btnAgain").style.display = "none";
+  document.getElementById("btnKnow").style.display = "none";
+  document.getElementById("flashStage").style.cursor = "default";
+}
+function startReview(){
+  queue = dueCards(deck);
+  if(!queue.length){
+    document.getElementById("flashCard").style.display = "none";
+    document.getElementById("reviewDone").style.display = "block";
+    return;
+  }
+  // shuffle
+  queue = queue.sort(()=>Math.random()-0.5);
+  qi = 0;
+  document.getElementById("flashCard").style.display = "block";
+  document.getElementById("reviewDone").style.display = "none";
+  showCard();
+}
+function showCard(){
+  const q = queue[qi];
+  const item = q.deck==="phrases"
+    ? {en:q.item.en, zh:q.item.zh}
+    : {en:q.item.en, zh:q.item.zh + (q.item.ex?" · "+q.item.ex:"")};
+  flipped = false;
+  document.getElementById("flashFront").textContent = item.en;
+  document.getElementById("flashBack").textContent = item.zh;
+  document.getElementById("flashBack").style.display = "none";
+  document.getElementById("flashHint").textContent = `点卡片翻面 · ${qi+1}/${queue.length}`;
+  document.getElementById("btnAgain").style.display = "none";
+  document.getElementById("btnKnow").style.display = "none";
+  document.getElementById("flashStage").style.cursor = "pointer";
+}
+function flipCard(){
+  if(!queue.length) return;
+  flipped = true;
+  document.getElementById("flashBack").style.display = "block";
+  document.getElementById("btnAgain").style.display = "block";
+  document.getElementById("btnKnow").style.display = "block";
+  document.getElementById("flashHint").textContent = "认识吗？";
+}
+function rateCard(knew){
+  const q = queue[qi];
+  const c = state.cards[q.id] || {level:0, due:Date.now(), reps:0};
+  if(knew){
+    c.level = Math.min(5, c.level+1);
+    c.due = Date.now() + INTERVALS[c.level]*dayMs();
+  }else{
+    c.level = 0;
+    c.due = Date.now() + 5*60000; // 5 分钟后再次出现
+  }
+  c.reps = (c.reps||0)+1;
+  state.cards[q.id] = c;
+  save();
+  qi++;
+  if(qi >= queue.length){
+    // mark today's word task progress partly
+    document.getElementById("flashCard").style.display = "none";
+    document.getElementById("reviewDone").style.display = "block";
+    renderWordsStats(); renderToday();
+    return;
+  }
+  showCard();
+}
+function speakFlash(e){
+  e.stopPropagation();
+  if(!queue.length) return;
+  speak(queue[qi].item.en, 0.9);
+}
+
+/* ============ 练口语 ============ */
+function renderSpeakList(){
+  document.getElementById("micWarn").textContent = micAvailable();
+  const wrap = document.getElementById("speakList");
+  wrap.innerHTML = PHRASES.filter(p=>p.en.split(" ").length <= 8).slice(0, 20).map((p,i)=>{
+    return `<div class="line-item">
+      <button class="speak-btn" onclick="speak(${JSON.stringify(p.en)})">🔊</button>
+      <div class="txt"><div class="en">${p.en}</div><div class="zh">${p.zh}</div></div>
+      <button class="mic-btn" onclick="startMic(this, ${JSON.stringify(p.en)})">🎤</button>
+    </div>
+    <div class="result" id="res-${i}"></div>`;
+  }).join("");
+}
+function startMic(btn, target){
+  if(!SR){ toast("此浏览器不支持语音识别"); return; }
+  if(location.protocol === "file:"){ toast("本地文件无法用麦克风"); return; }
+  if(recognizing){
+    stopMic();
+    return;
+  }
+  recTarget = target;
+  recognizing = true;
+  btn.classList.add("rec");
+  btn.textContent = "🔴";
+  const rec = new SR();
+  rec.lang = "en-US";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+  rec.onresult = (ev)=>{
+    const t = ev.results[0][0].transcript;
+    checkResult(btn, target, t);
+  };
+  rec.onerror = (ev)=>{
+    recognizing = false;
+    btn.classList.remove("rec");
+    btn.textContent = "🎤";
+    toast("没听清，再试一次");
+  };
+  rec.onend = ()=>{
+    recognizing = false;
+    btn.classList.remove("rec");
+    btn.textContent = "🎤";
+  };
+  rec.start();
+  setTimeout(()=>{ if(recognizing){ try{rec.stop();}catch(e){} } }, 6000);
+}
+function stopMic(){ recognizing = false; document.querySelectorAll(".mic-btn").forEach(b=>{b.classList.remove("rec"); b.textContent="🎤";}); }
+function norm(s){ return (s||"").toLowerCase().replace(/[^a-z0-9\s']/g,"").trim().split(/\s+/).filter(Boolean); }
+function similarity(a,b){
+  const A=norm(a), B=norm(b);
+  if(!A.length) return 0;
+  const set = new Set(B);
+  let hit=0; for(const w of A) if(set.has(w)) hit++;
+  return Math.max(0, Math.min(100, Math.round(hit/A.length*100)));
+}
+function checkResult(btn, target, said){
+  const score = similarity(target, said);
+  const idx = [...document.querySelectorAll(".mic-btn")].indexOf(btn);
+  const el = document.getElementById("res-"+idx);
+  el.classList.add("show");
+  let verdict, color;
+  if(score>=85){ verdict="很棒！几乎完全一致"; color="var(--ok)"; }
+  else if(score>=60){ verdict="不错，再练练个别词"; color="var(--accent2)"; }
+  else { verdict="差距较大，多跟读几遍"; color="var(--bad)"; }
+  el.innerHTML = `<div>你说的是：<i>"${said}"</i></div>
+    <div style="margin-top:6px">目标：<i>"${target}"</i></div>
+    <div style="margin-top:8px"><span class="score" style="color:${color}">${score}%</span> · ${verdict}</div>`;
+}
+
+/* ============ 对话 ============ */
+function renderDialogList(){
+  const wrap = document.getElementById("dialogList");
+  wrap.innerHTML = DIALOGUES.map((d,i)=>{
+    return `<div class="card" style="cursor:pointer" onclick="openDialog(${i})">
+      <div style="display:flex; align-items:center; gap:12px">
+        <div style="font-size:28px">${d.icon}</div>
+        <div><div style="font-weight:700">${d.title}</div><div class="muted" style="font-size:13px">${d.lines.length} 句对话</div></div>
+      </div>
+    </div>`;
+  }).join("");
+}
+function openDialog(i){
+  const d = DIALOGUES[i];
+  const wrap = document.getElementById("dialogList");
+  wrap.innerHTML = `<div class="card">
+      <div class="dialog-title">${d.icon} ${d.title}</div>
+      <div class="dialog-sub">点 🔊 逐句听，或「▶️ 播放全部」连续跟读</div>
+      <button class="btn ghost" style="margin-bottom:12px" onclick="playAll(${i})">▶️ 播放全部</button>
+      <button class="btn ghost" style="margin-bottom:14px" onclick="renderDialogList()">← 返回列表</button>
+    </div>` +
+    d.lines.map((ln,li)=>{
+      return `<div class="line-item">
+        <button class="speak-btn" onclick="speak(${JSON.stringify(ln.en)})">🔊</button>
+        <div class="txt"><div class="en">${ln.en}</div><div class="zh">${ln.zh}</div></div>
+      </div>`;
+    }).join("");
+}
+let playingAll = false;
+function playAll(i){
+  if(playingAll){ speechSynthesis.cancel(); playingAll=false; return; }
+  const lines = DIALOGUES[i].lines;
+  playingAll = true;
+  let idx = 0;
+  function next(){
+    if(idx >= lines.length){ playingAll=false; return; }
+    const u = new SpeechSynthesisUtterance(lines[idx].en);
+    u.lang = "en-US"; u.rate = 0.92;
+    const v = pickVoice(); if(v) u.voice = v;
+    u.onend = ()=>{ idx++; setTimeout(next, 700); };
+    speechSynthesis.cancel();
+    speechSynthesis.speak(u);
+  }
+  next();
+}
+
+/* ============ 工具 ============ */
+function toast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  clearTimeout(t._t);
+  t._t = setTimeout(()=>t.classList.remove("show"), 2200);
+}
+
+/* ============ 启动 ============ */
+renderToday();
+</script>
+</body>
+</html>
