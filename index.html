@@ -177,18 +177,19 @@
       <div class="card flash" id="flashCard">
         <div class="stage" id="flashStage" onclick="flipCard()">
           <div>
-            <div class="en" id="flashFront">点「开始复习」</div>
+            <div class="en" id="flashFront">开始背单词吧</div>
             <div class="zh" id="flashBack" style="display:none"></div>
           </div>
         </div>
-        <div class="hint center" id="flashHint">点卡片翻面看答案</div>
-        <div style="margin-top:12px">
-          <button class="speak-btn" style="float:right; margin-left:10px" id="flashSpeak" onclick="speakFlash(event)">🔊</button>
+        <div class="hint center" id="flashHint">点击下方「开始复习」</div>
+        <div style="margin-top:12px; text-align:right">
+          <button class="speak-btn" id="flashSpeak" onclick="speakFlash(event)" style="display:none">🔊</button>
         </div>
-        <div class="row" style="margin-top:14px">
-          <button class="btn bad" id="btnAgain" style="display:none" onclick="rateCard(false)">😅 不认识</button>
-          <button class="btn ok" id="btnKnow" style="display:none" onclick="rateCard(true)">✅ 认识</button>
+        <div class="row" id="rateRow" style="margin-top:14px; display:none">
+          <button class="btn bad" onclick="rateCard(false)">😅 不认识</button>
+          <button class="btn ok" onclick="rateCard(true)">✅ 认识</button>
         </div>
+        <button class="btn" id="btnStart" style="margin-top:14px" onclick="startReview()">开始复习</button>
       </div>
       <div class="card center" id="reviewDone" style="display:none">
         <div style="font-size:40px">🎉</div>
@@ -405,14 +406,19 @@ function pickVoice(){
   for(const p of prefer){ const v = voices.find(v=>v.name===p); if(v) return v; }
   return voices.find(v=>v.lang && v.lang.toLowerCase().startsWith("en")) || voices.find(v=>v.lang && v.lang.toLowerCase().startsWith("en-us")) || null;
 }
+let speakTimer = null;
 function speak(text, rate){
   if(!("speechSynthesis" in window)){ toast("此浏览器不支持语音"); return; }
-  speechSynthesis.cancel();
+  const synth = window.speechSynthesis;
+  if(!voices.length) loadVoices();
+  synth.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-US";
   u.rate = rate || 0.95;
+  u.volume = 1;
   const v = pickVoice(); if(v) u.voice = v;
-  speechSynthesis.speak(u);
+  clearTimeout(speakTimer);
+  speakTimer = setTimeout(()=>{ synth.resume(); synth.speak(u); }, 60);
 }
 
 /* ============ 语音识别 ============ */
@@ -467,7 +473,6 @@ function setDeck(d){
   deck = d;
   document.querySelectorAll(".pill").forEach(p=>p.classList.toggle("active", p.dataset.deck===d));
   renderWordsStats();
-  document.getElementById("reviewArea").innerHTML = document.getElementById("reviewArea").innerHTML; // keep
   showIdle();
 }
 function renderWordsStats(){
@@ -477,11 +482,12 @@ function renderWordsStats(){
 function showIdle(){
   document.getElementById("flashCard").style.display = "block";
   document.getElementById("reviewDone").style.display = "none";
-  document.getElementById("flashFront").textContent = "点「开始复习」";
+  document.getElementById("flashFront").textContent = "开始背单词吧";
   document.getElementById("flashBack").style.display = "none";
-  document.getElementById("flashHint").textContent = "点卡片翻面看答案";
-  document.getElementById("btnAgain").style.display = "none";
-  document.getElementById("btnKnow").style.display = "none";
+  document.getElementById("flashHint").textContent = "点击下方「开始复习」";
+  document.getElementById("rateRow").style.display = "none";
+  document.getElementById("btnStart").style.display = "block";
+  document.getElementById("flashSpeak").style.display = "none";
   document.getElementById("flashStage").style.cursor = "default";
 }
 function startReview(){
@@ -508,16 +514,16 @@ function showCard(){
   document.getElementById("flashBack").textContent = item.zh;
   document.getElementById("flashBack").style.display = "none";
   document.getElementById("flashHint").textContent = `点卡片翻面 · ${qi+1}/${queue.length}`;
-  document.getElementById("btnAgain").style.display = "none";
-  document.getElementById("btnKnow").style.display = "none";
+  document.getElementById("rateRow").style.display = "none";
+  document.getElementById("btnStart").style.display = "none";
+  document.getElementById("flashSpeak").style.display = "inline-flex";
   document.getElementById("flashStage").style.cursor = "pointer";
 }
 function flipCard(){
   if(!queue.length) return;
   flipped = true;
   document.getElementById("flashBack").style.display = "block";
-  document.getElementById("btnAgain").style.display = "block";
-  document.getElementById("btnKnow").style.display = "block";
+  document.getElementById("rateRow").style.display = "flex";
   document.getElementById("flashHint").textContent = "认识吗？";
 }
 function rateCard(knew){
@@ -550,18 +556,22 @@ function speakFlash(e){
 }
 
 /* ============ 练口语 ============ */
+let _speakPhrases = [];
 function renderSpeakList(){
   document.getElementById("micWarn").textContent = micAvailable();
   const wrap = document.getElementById("speakList");
-  wrap.innerHTML = PHRASES.filter(p=>p.en.split(" ").length <= 8).slice(0, 20).map((p,i)=>{
+  _speakPhrases = PHRASES.filter(p=>p.en.split(" ").length <= 8).slice(0, 20);
+  wrap.innerHTML = _speakPhrases.map((p,i)=>{
     return `<div class="line-item">
-      <button class="speak-btn" onclick="speak(${JSON.stringify(p.en)})">🔊</button>
+      <button class="speak-btn" onclick="speakIdx(${i})">🔊</button>
       <div class="txt"><div class="en">${p.en}</div><div class="zh">${p.zh}</div></div>
-      <button class="mic-btn" onclick="startMic(this, ${JSON.stringify(p.en)})">🎤</button>
+      <button class="mic-btn" onclick="startMicIdx(this, ${i})">🎤</button>
     </div>
     <div class="result" id="res-${i}"></div>`;
   }).join("");
 }
+function speakIdx(i){ speak(_speakPhrases[i].en); }
+function startMicIdx(btn, i){ startMic(btn, _speakPhrases[i].en); }
 function startMic(btn, target){
   if(!SR){ toast("此浏览器不支持语音识别"); return; }
   if(location.protocol === "file:"){ toast("本地文件无法用麦克风"); return; }
@@ -632,6 +642,7 @@ function renderDialogList(){
 }
 function openDialog(i){
   const d = DIALOGUES[i];
+  window._curDialog = d;
   const wrap = document.getElementById("dialogList");
   wrap.innerHTML = `<div class="card">
       <div class="dialog-title">${d.icon} ${d.title}</div>
@@ -641,11 +652,12 @@ function openDialog(i){
     </div>` +
     d.lines.map((ln,li)=>{
       return `<div class="line-item">
-        <button class="speak-btn" onclick="speak(${JSON.stringify(ln.en)})">🔊</button>
+        <button class="speak-btn" onclick="speakLine(${li})">🔊</button>
         <div class="txt"><div class="en">${ln.en}</div><div class="zh">${ln.zh}</div></div>
       </div>`;
     }).join("");
 }
+function speakLine(li){ speak(window._curDialog.lines[li].en); }
 let playingAll = false;
 function playAll(i){
   if(playingAll){ speechSynthesis.cancel(); playingAll=false; return; }
